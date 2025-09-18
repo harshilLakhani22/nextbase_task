@@ -11,6 +11,7 @@ import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupSocketServer } from './socket';
+import fastifyCookie from '@fastify/cookie';
 
 dotenv.config();
 const server = Fastify({ logger: { level: 'info' } });
@@ -25,6 +26,7 @@ const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE || 200 * 1024 * 1024); //
 
 // JWT plugin
 server.register(fastifyJwt, { secret: process.env.JWT_SECRET || 'dev_secret' });
+server.register(fastifyCookie);
 
 // CORS (allow frontend)
 server.register(cors, { origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000', credentials: true });

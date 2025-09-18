@@ -57,7 +57,8 @@ export function setupSocketServer(fastify: FastifyInstance) {
           io.to(`user:${data.userId}`).emit('thumbnail:job:update', {
             jobId: data.jobId,
             status: data.status,
-            thumbnailUrl: data.thumbnailPath,
+            thumbnailUrl: data.thumbnailUrl, // <-- use the correct field
+            thumbnailPath: data.thumbnailPath, // (optional, for debugging)
             error: data.error,
           });
         }

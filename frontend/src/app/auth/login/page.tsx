@@ -22,8 +22,7 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem('token', data.token);
+      if (res.ok && data.success) {
         try {
           router.push('/dashboard');
         } catch {
