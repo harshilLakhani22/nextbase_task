@@ -1,0 +1,72 @@
+version: '3.9'
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ../backend
+    restart: unless-stopped
+    ports:
+      - 4000:4000
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/nextbase
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev_jwt_secret
+      - UPLOAD_PATH=/app/uploads/originals
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ../worker
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/nextbase
+      - REDIS_URL=redis://redis:6379
+      - THUMBNAIL_PATH=/app/uploads/thumbnails
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ../frontend
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  uploads_data:
