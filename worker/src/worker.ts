@@ -5,6 +5,7 @@ dotenv.config();
 import pino from 'pino';
 import Redis from 'ioredis';
 import path from 'path';
+import { Worker } from 'bullmq';
 
 import { acquireLock, releaseLock } from './utils/redisLock';
 import { processImage } from './processors/imageProcessor';
@@ -12,28 +13,6 @@ import { processVideo } from './processors/videoProcessor';
 
 const logger = pino({ level: 'info' });
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-// dynamic import of bullmq to avoid ESM export mismatch issues
-const bullmqPkg = await import('bullmq').catch((err) => {
-  console.error('Failed to import bullmq. Did you install it? Run: npm i bullmq');
-  throw err;
-});
-
-// Grab Worker and QueueScheduler robustly (support various package shapes)
-const WorkerImpl = (bullmqPkg.Worker || bullmqPkg.default?.Worker);
-const QueueSchedulerImpl = (bullmqPkg.QueueScheduler || bullmqPkg.default?.QueueScheduler);
-const QueueScheduler = QueueSchedulerImpl;
-const Worker = WorkerImpl;
-
-if (!Worker) {
-  console.error('BullMQ Worker not found in the installed package. Ensure you have bullmq v5.x installed.');
-  process.exit(1);
-}
-
-if (!QueueScheduler) {
-  // QueueScheduler is optional but recommended. Warn but continue.
-  logger.warn('QueueScheduler not available from bullmq import. Stalled-job handling may be reduced.');
-}
 
 // ioredis connections
 const loggerRedis = new Redis(redisUrl);
@@ -62,14 +41,14 @@ const ThumbnailJob = mongoose.models.ThumbnailJob || mongoose.model('ThumbnailJo
 const pubChannel = 'thumbnails:events';
 
 // create QueueScheduler if available (helps with stalled jobs)
-if (QueueScheduler) {
-  try {
-    const qs = new QueueScheduler('thumbnail-jobs', { connection: bullmqConnection });
-    logger.info('QueueScheduler initialized for thumbnail-jobs');
-  } catch (err) {
-    logger.warn({ err }, 'Failed to initialize QueueScheduler; continuing without it.');
-  }
-}
+// if (QueueScheduler) {
+//   try {
+//     const qs = new QueueScheduler('thumbnail-jobs', { connection: bullmqConnection });
+//     logger.info('QueueScheduler initialized for thumbnail-jobs');
+//   } catch (err) {
+//     logger.warn({ err }, 'Failed to initialize QueueScheduler; continuing without it.');
+//   }
+// }
 
 const worker = new Worker(
   'thumbnail-jobs',
