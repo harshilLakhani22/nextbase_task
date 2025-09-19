@@ -7,9 +7,9 @@ import Redis from 'ioredis';
 import path from 'path';
 import { Worker } from 'bullmq';
 
-import { acquireLock, releaseLock } from './utils/redisLock';
-import { processImage } from './processors/imageProcessor';
-import { processVideo } from './processors/videoProcessor';
+import { acquireLock, releaseLock } from './utils/redisLock.js';
+import { processImage } from './processors/imageProcessor.js';
+import { processVideo } from './processors/videoProcessor.js';
 
 const logger = pino({ level: 'info' });
 const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';

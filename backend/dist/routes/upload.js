@@ -8,16 +8,30 @@ import sanitize from 'sanitize-filename';
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'];
 export default async function uploadRoutes(fastify) {
     const UPLOAD_PATH = process.env.UPLOAD_PATH || path.resolve(__dirname, '../../uploads');
-    fastify.post('/api/upload', 
-    // Remove authentication for testing
-    // { preValidation: [(fastify as any).authenticate] },
-    async (request, reply) => {
-        // For unauthenticated testing, use a static userId
-        const userId = 'test';
-        // const userId = (request.user as any).userId;
-        // if (!userId) return reply.code(401).send({ error: 'Missing user id' });
-        const userDir = path.resolve(UPLOAD_PATH, 'originals', userId);
-        // Ensure user directory exists
+    fastify.post('/api/upload', async (request, reply) => {
+        // Read token from cookie (preferred) or Authorization header
+        const cookieToken = request.cookies?.token;
+        const authHeader = (request.headers?.authorization || '').startsWith('Bearer ')
+            ? request.headers.authorization.split(' ')[1]
+            : undefined;
+        const token = cookieToken || authHeader;
+        let userId = null;
+        if (!token) {
+            return reply.code(401).send({ error: 'Unauthorized: missing token' });
+        }
+        try {
+            const decoded = fastify.jwt.verify(token);
+            userId = decoded.userId;
+            request.user = decoded;
+        }
+        catch (err) {
+            request.log.warn({ err }, 'Invalid token on /api/upload');
+            return reply.code(401).send({ error: 'Unauthorized: invalid token' });
+        }
+        if (!userId) {
+            return reply.code(401).send({ error: 'Unauthorized: missing user id' });
+        }
+        const userDir = path.resolve(UPLOAD_PATH, 'originals', String(userId));
         await fsPromises.mkdir(userDir, { recursive: true });
         const jobs = [];
         try {
@@ -25,7 +39,6 @@ export default async function uploadRoutes(fastify) {
                 if (part.type === 'file') {
                     const mimetype = part.mimetype || '';
                     if (!ALLOWED_MIME.includes(mimetype)) {
-                        // drain/skip
                         part.file.resume();
                         continue;
                     }
@@ -47,6 +60,7 @@ export default async function uploadRoutes(fastify) {
                         mimetype,
                         filename,
                         status: 'pending',
+                        thumbnailUrl: null,
                     });
                     await enqueueThumbnailJob({
                         jobId,
@@ -55,7 +69,6 @@ export default async function uploadRoutes(fastify) {
                         mimetype,
                         filename,
                     });
-                    // IMPORTANT: do NOT return a thumbnailUrl yet because the worker hasn't generated it.
                     jobs.push({
                         jobId: jobDoc.jobId,
                         status: jobDoc.status,
@@ -69,6 +82,36 @@ export default async function uploadRoutes(fastify) {
         catch (err) {
             request.log.error(err);
             return reply.code(500).send({ error: 'File upload failed' });
+        }
+    });
+    // GET all uploads for the authenticated user
+    fastify.get('/api/uploads', async (request, reply) => {
+        try {
+            const cookieToken = request.cookies?.token;
+            const authHeader = (request.headers?.authorization || '').startsWith('Bearer ')
+                ? request.headers.authorization.split(' ')[1]
+                : undefined;
+            const token = cookieToken || authHeader;
+            if (!token)
+                return reply.code(401).send({ error: 'Unauthorized' });
+            const decoded = fastify.jwt.verify(token);
+            const userId = decoded.userId;
+            if (!userId)
+                return reply.code(401).send({ error: 'Invalid token payload' });
+            // Fetch all jobs for this user sorted newest first
+            const jobs = await ThumbnailJob.find({ userId }).sort({ createdAt: -1 }).lean();
+            const safeJobs = jobs.map((j) => ({
+                jobId: j.jobId,
+                filename: j.filename,
+                status: j.status,
+                thumbnailUrl: j.thumbnailUrl || null,
+                createdAt: j.createdAt,
+            }));
+            return reply.send(safeJobs);
+        }
+        catch (err) {
+            request.log.error(err);
+            return reply.code(500).send({ error: 'Failed to fetch uploads' });
         }
     });
 }

@@ -1,7 +1,7 @@
 // backend/src/routes/upload.ts
 import { FastifyInstance, FastifyRequest } from 'fastify';
-import { ThumbnailJob } from '../models/thumbnail';
-import { enqueueThumbnailJob } from '../services/queue';
+import { ThumbnailJob } from '../models/thumbnail.js';
+import { enqueueThumbnailJob } from '../services/queue.js';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 import path from 'path';

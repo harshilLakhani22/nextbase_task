@@ -9,105 +9,96 @@ A full-stack application for handling file uploads with automatic thumbnail gene
 ├── backend/        # Fastify API server
 ├── frontend/       # Next.js web application
 ├── worker/         # Thumbnail generation service
-├── infra/         # Docker and infrastructure configs
-└── data/          # Shared data directory for uploads
+├── infra/          # Docker and infrastructure configs
+└── data/           # Shared data directory for uploads (local only)
 ```
 
-## Prerequisites
+## Recommended: Run Everything with Docker
 
-- Node.js v20+
-- MongoDB v7+
-- Redis v7+
-- Docker and Docker Compose (optional)
+### Prerequisites
 
-## Quick Start with Docker
+- Docker and Docker Compose
 
-1. Clone the repository:
+### Quick Start
 
-```bash
-git clone <repository-url>
-cd nextbase_task
-```
+1. **Clone the repository:**
 
-2. Copy sample .env files:
+   ```bash
+   git clone <https://github.com/harshilLakhani22/nextbase_task>
+   cd nextbase_task
+   ```
 
-```bash
-cp backend/.env.example backend/.env
-cp worker/.env.example worker/.env
-cp frontend/.env.example frontend/.env
-cp infra/.env.example infra/.env
-```
+2. **Start all services using the Makefile:**
 
-3. Start all services with Docker Compose:
+   ```bash
+   cd infra
+   make up
+   ```
 
-```bash
-cd infra
-make up
-```
+   - This will build and start MongoDB, Redis, backend, worker, and frontend.
+   - The app will be available at: http://localhost:3000
 
-Visit http://localhost:3000 to access the application.
+3. **Stopping and rebuilding:**
+   - To stop all services:
+     ```bash
+     make down
+     ```
+   - To rebuild images:
+     ```bash
+     make build
+     ```
 
-## Manual Setup (Development)
+### Environment Variables
+
+- All required environment variables are set in `infra/docker-compose.yml`.
+- You do **not** need to manually copy or edit any `.env` files for Docker usage.
+
+### Where are uploads and thumbnails stored?
+
+- All uploaded files (originals and thumbnails) are stored in a Docker-managed volume (`uploads_data`).
+- **Originals:** `/app/uploads/originals/<userId>/<filename>`
+- **Thumbnails:** `/app/uploads/thumbnails/<userId>/<jobId>.webp`
+- These are accessible via the backend at `/uploads/...` URLs (e.g., `http://localhost:4000/uploads/thumbnails/...`).
+- The volume is shared between backend and worker containers for seamless processing.
+
+---
+
+## Manual Setup (Development, not recommended for production)
 
 1. Start MongoDB and Redis (using Docker or local installation):
 
-```bash
-cd infra
-docker compose up mongo redis -d
-```
+   ```bash
+   cd infra
+   docker compose up mongo redis -d
+   ```
 
-- local command for mongodb :- brew services start mongodb-community
-- local command for redis :- brew services start redis
+   Or, if you use Homebrew:
+
+   - `brew services start mongodb-community`
+   - `brew services start redis`
 
 2. Setup and start the backend:
 
-```bash
-cd backend
-npm install
-npm run dev
-```
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
 
 3. Setup and start the worker:
 
-```bash
-cd worker
-npm install
-npm run dev
-```
+   ```bash
+   cd worker
+   npm install
+   npm run dev
+   ```
 
 4. Setup and start the frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Environment Variables
-
-### Backend (.env)
-
-```env
-PORT=4000
-MONGO_URI=mongodb://localhost:27017/nextbase ##(nextbase is db name)
-REDIS_URL=redis://localhost:6379
-JWT_SECRET=supersecretkey
-UPLOAD_PATH=/absolute/path/to/nextbase_task/data/uploads
-```
-
-### Worker (.env)
-
-```env
-MONGO_URI=mongodb://localhost:27017/nextbase ##(nextbase is db name)
-REDIS_URL=redis://localhost:6379
-UPLOAD_PATH=/absolute/path/to/nextbase_task/data/uploads
-```
-
-### Frontend (.env)
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
 ## Features
 
@@ -141,11 +132,17 @@ NEXT_PUBLIC_API_URL=http://localhost:4000
 
 ## Development Notes
 
-- Use absolute paths in UPLOAD_PATH for reliable file access
+- Use absolute paths in UPLOAD_PATH for reliable file access (local dev only)
 - The worker processes both images and videos differently
 - Thumbnails are generated as 128x128 WebP format
 - Frontend receives real-time updates via Socket.IO
 - Files are served from a shared volume in Docker setup
+
+## Docker Makefile Shortcuts
+
+- `make up` — Build and start all services
+- `make down` — Stop and remove all services
+- `make build` — Build all images without starting
 
 ## License
 

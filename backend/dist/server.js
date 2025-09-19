@@ -24,7 +24,13 @@ const MAX_FILE_SIZE = Number(process.env.MAX_FILE_SIZE || 200 * 1024 * 1024); //
 server.register(fastifyJwt, { secret: process.env.JWT_SECRET || 'dev_secret' });
 server.register(fastifyCookie);
 // CORS (allow frontend)
-server.register(cors, { origin: process.env.FRONTEND_ORIGIN || 'http://localhost:3000', credentials: true });
+server.register(cors, {
+    origin: (origin, cb) => {
+        // allow local dev or a configured origin
+        cb(null, origin ?? 'http://localhost:3000');
+    },
+    credentials: true,
+});
 // JWT Auth decorator
 server.decorate('authenticate', async function (request, reply) {
     try {

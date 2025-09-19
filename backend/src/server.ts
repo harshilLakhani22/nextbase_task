@@ -3,14 +3,14 @@ import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import fastifyJwt from '@fastify/jwt';
 import cors from '@fastify/cors';
-import { connectDB } from './db';
-import authRoutes from './routes/auth';
-import uploadRoutes from './routes/upload';
+import { connectDB } from './db.js';
+import authRoutes from './routes/auth.js';
+import uploadRoutes from './routes/upload.js';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { setupSocketServer } from './socket';
+import { setupSocketServer } from './socket.js';
 import fastifyCookie from '@fastify/cookie';
 
 dotenv.config();

@@ -32,7 +32,7 @@ services:
     environment:
       - MONGO_URI=mongodb://mongo:27017/nextbase
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=dev_jwt_secret
+      - JWT_SECRET=supersecretkey
       # Serve entire uploads folder (so /uploads/thumbnails is reachable)
       - UPLOAD_PATH=/app/uploads
       - PORT=4000
